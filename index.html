@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>SouthWest Bristol Jersey Camera</title>
+  <style>
+    :root {
+      --ui: rgba(0,0,0,.75);
+      --accent: #22c55e;
+      --text: #fff;
+      --shadow: 0 8px 30px rgba(0,0,0,.35);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background:#0b0f14; color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    .app { display:flex; flex-direction:column; height:100%; gap:10px; }
+    .stage-wrap { position:relative; margin:0 auto; width:100%; max-width:900px; aspect-ratio: 9 / 16; background:#111; border-radius:18px; overflow:hidden; box-shadow: var(--shadow); }
+    video, canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+    #overlayImg { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; transform-origin:center center; image-rendering:auto; opacity:1; }
+    #numberPreview { position:absolute; left:50%; top:55%; transform:translate(-50%, -50%); font-weight:900; letter-spacing:1px; color:#0b1b3a; text-shadow: 0 2px 6px rgba(0,0,0,.35); pointer-events:none; user-select:none; white-space:nowrap; font-family:Impact, Haettenschweiler, 'Arial Black', sans-serif; -webkit-text-stroke:3px white; }
+    .hud { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
+    .btn { border:none; background:var(--ui); color:var(--text); padding:12px 14px; border-radius:12px; backdrop-filter: blur(6px); box-shadow: var(--shadow); display:flex; align-items:center; gap:8px; font-weight:600; }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary{ background: linear-gradient(180deg, #34d399, #059669); }
+    .panel { width:100%; max-width:900px; margin:0 auto 12px; background:var(--ui); border-radius:14px; padding:12px; box-shadow: var(--shadow); }
+    .row { display:grid; grid-template-columns: 1fr auto; align-items:center; gap:10px; margin:8px 0; }
+    label { font-size:.9rem; opacity:.9; }
+    input[type="range"] { width: 180px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="stage-wrap" id="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="captureCanvas" style="display:none"></canvas>
+    <img id="overlayImg" alt="overlay" src="jersey_front.png" />
+    <div id="numberPreview">9</div>
+    <div class="hud">
+      <button id="captureBtn" class="btn primary">Capture</button>
+      <a id="downloadLink" class="btn" download="southwest-bristol.jpg" style="display:none">Download</a>
+      <button id="retakeBtn" class="btn" style="display:none">Retake</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="row"><label>Jersey number</label><input id="numberText" placeholder="e.g., 9" value="9" /></div>
+    <div class="row"><label>Number size (%)</label><input id="numberSize" type="range" min="5" max="25" step="0.5" value="14"></div>
+    <div class="row"><label>Number X</label><input id="numberX" type="range" min="-30" max="30" step="0.5" value="0"></div>
+    <div class="row"><label>Number Y</label><input id="numberY" type="range" min="-30" max="30" step="0.5" value="5"></div>
+    <div class="row"><label>Number color</label><input id="numberColor" type="color" value="#0b1b3a"></div>
+    <div class="row"><label>Outline width</label><input id="numberOutline" type="range" min="0" max="10" step="0.5" value="3"></div>
+    <div class="row"><label>Number opacity</label><input id="numberOpacity" type="range" min="0" max="1" step="0.01" value="1"></div>
+  </div>
+</div>
+<script>
+const video=document.getElementById('video');const overlay=document.getElementById('overlayImg');const canvas=document.getElementById('captureCanvas');const captureBtn=document.getElementById('captureBtn');const retakeBtn=document.getElementById('retakeBtn');const downloadLink=document.getElementById('downloadLink');const stage=document.getElementById('stage');const numberPreview=document.getElementById('numberPreview');const numberText=document.getElementById('numberText');const numberSize=document.getElementById('numberSize');const numberX=document.getElementById('numberX');const numberY=document.getElementById('numberY');const numberColor=document.getElementById('numberColor');const numberOutline=document.getElementById('numberOutline');const numberOpacity=document.getElementById('numberOpacity');let stream;async function startCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});video.srcObject=stream;}catch(e){alert('Camera access failed: '+e.message);}}function updateNumberStyles(){const rect=stage.getBoundingClientRect();const sizePct=parseFloat(numberSize.value);const xPct=parseFloat(numberX.value);const yPct=parseFloat(numberY.value);const o=parseFloat(numberOpacity.value);numberPreview.textContent=(numberText.value||'').trim();numberPreview.style.fontSize=Math.round((sizePct/100)*rect.height)+'px';numberPreview.style.left=`calc(50% + ${xPct}%)`;numberPreview.style.top=`calc(55% + ${yPct}%)`;numberPreview.style.color=numberColor.value;numberPreview.style.opacity=o;numberPreview.style.webkitTextStroke=`${numberOutline.value}px white`;}[numberText,numberSize,numberX,numberY,numberColor,numberOutline,numberOpacity].forEach(i=>i.addEventListener('input',updateNumberStyles));captureBtn.addEventListener('click',()=>{const rect=stage.getBoundingClientRect();const w=Math.floor(rect.width);const h=Math.floor(rect.height);canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.drawImage(video,0,0,w,h);if(overlay.src){ctx.drawImage(overlay,0,0,w,h);}const num=(numberText.value||'').trim();if(num){const sizePx=(parseFloat(numberSize.value)/100)*h;const x=w/2+(parseFloat(numberX.value)/100)*w;const y=(0.55*h)+(parseFloat(numberY.value)/100)*h;ctx.save();ctx.globalAlpha=parseFloat(numberOpacity.value);ctx.font=`900 ${Math.round(sizePx)}px Impact,Haettenschweiler,'Arial Black',system-ui,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';const ow=parseFloat(numberOutline.value);if(ow>0){ctx.lineWidth=Math.max(1,ow*(h/800));ctx.strokeStyle='#ffffff';ctx.strokeText(num,x,y);}ctx.fillStyle=numberColor.value;ctx.fillText(num,x,y);ctx.restore();}const dataUrl=canvas.toDataURL('image/jpeg',0.95);downloadLink.href=dataUrl;downloadLink.style.display='inline-flex';retakeBtn.style.display='inline-flex';captureBtn.style.display='none';video.style.display='none';canvas.style.display='block';});retakeBtn.addEventListener('click',()=>{video.style.display='block';canvas.style.display='none';downloadLink.style.display='none';retakeBtn.style.display='none';captureBtn.style.display='inline-flex';});startCamera();updateNumberStyles();
+</script>
+</body>
+</html>
